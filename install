@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+# Sonora installer: sets up dependencies in a private venv and creates a `sonora` command.
+# Run it from the folder you want Sonora to live in:  ./install
+set -e
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+echo "==> Installing system packages (python, mpv, ffmpeg)"
+if command -v pacman >/dev/null; then
+  sudo pacman -S --needed --noconfirm python mpv ffmpeg
+elif command -v apt >/dev/null; then
+  sudo apt install -y python3 python3-venv mpv ffmpeg
+elif command -v dnf >/dev/null; then
+  sudo dnf install -y python3 mpv ffmpeg-free
+else
+  echo "Unknown distro: install python (3.11+), mpv and ffmpeg yourself, then re-run."
+fi
+
+echo "==> Creating virtual environment and installing Python packages"
+python3 -m venv "$DIR/.venv"
+"$DIR/.venv/bin/pip" install -U pip
+"$DIR/.venv/bin/pip" install -U -r "$DIR/requirements.txt"
+
+echo "==> Creating the 'sonora' command"
+mkdir -p "$HOME/.local/bin"
+cat > "$HOME/.local/bin/sonora" <<LAUNCH
+#!/usr/bin/env bash
+exec "$DIR/.venv/bin/python" "$DIR/sonora.py" "\$@"
+LAUNCH
+chmod +x "$HOME/.local/bin/sonora"
+
+echo
+echo "Done. Start it with:  sonora"
+echo "(if 'command not found', open a new terminal or run: source ~/.profile)"
